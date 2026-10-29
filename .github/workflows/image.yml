@@ -1,0 +1,54 @@
+name: image
+
+# The database's image (Containerfile), published for the installer to pull:
+# ghcr.io/einhq/db:main is the newest commit on main, :sha-<commit> each one. The base is a floating
+# tag, so a weekly build takes PostgreSQL's and the extensions' minor releases into :main too.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+# One build at a time; a push during it queues the newest commit only.
+concurrency:
+  group: image
+  cancel-in-progress: false
+
+jobs:
+  image:
+    # GitHub alone publishes: a Forgejo that runs this repository's workflows has no use for it.
+    if: github.server_url == 'https://github.com'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Stamp
+        id: stamp
+        run: echo "sha=$(git rev-parse --short=9 HEAD)" >>"$GITHUB_OUTPUT"
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Containerfile
+          platforms: linux/amd64,linux/arm64
+          pull: true
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/db:main
+            ghcr.io/${{ github.repository_owner }}/db:sha-${{ steps.stamp.outputs.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.description=PostgreSQL for EiN, with TimescaleDB, pgvector and PostGIS: run by compose from ein/deploy
+            org.opencontainers.image.licenses=MIT
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
