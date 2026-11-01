@@ -4,7 +4,9 @@ PostgreSQL for [EiN](https://github.com/einhq): the image and how to start it.
 
 The image (`Containerfile`) is TimescaleDB's PostgreSQL 18 image with pgvector added. It holds
 every extension EiN uses — TimescaleDB, pgvector, PostGIS and pg_trgm — and EiN creates them in
-its database, and updates them after a new image, itself.
+its database, and updates them after a new image, itself. `NOTICE.md` names what it carries under
+which licence — TimescaleDB's community features are under the Timescale License, PostGIS under the
+GPL — and where the GPL parts' source is.
 
 ## Running it
 
