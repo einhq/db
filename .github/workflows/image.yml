@@ -2,9 +2,9 @@ name: image
 
 # The database's image (Containerfile), published for the installer to pull:
 # ghcr.io/einhq/db:main is main as of the last build, :sha-<commit> each commit built. Built once a
-# day when main has moved since (ein/core#835), and at once when run by hand. The base is a floating
-# tag, so Monday's run builds whatever the commit, taking PostgreSQL's and the extensions' minor
-# releases into :main too.
+# day when main has moved since (ein/core#835), and at once when run by hand. PostgreSQL and the
+# extensions come at the newest release their apt repositories have, so Monday's run builds whatever
+# the commit, taking their minor releases into :main too.
 on:
   schedule:
     - cron: '17 3 * * 0,2-6'
@@ -76,5 +76,5 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.description=PostgreSQL for EiN, with TimescaleDB, pgvector and PostGIS: run by compose from ein/deploy
             org.opencontainers.image.licenses=MIT
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # A cached layer would keep the packages of the build that made it.
+          no-cache: true

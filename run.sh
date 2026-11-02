@@ -16,11 +16,13 @@ PGPORT="${PGPORT:-5432}"
 # An absolute path; put it on a device with room, embeddings grow with the archive.
 PGDATA_HOST_PATH="${PGDATA_HOST_PATH:-$HOME/services/postgres}"
 
-# The base is a floating tag, and a build reuses the first copy pulled, so pull it first. Offline,
-# the build goes on with the local copy.
-BASE_IMAGE=$(awk '/^FROM /{print $2; exit}' Containerfile)
-podman pull "$BASE_IMAGE" >/dev/null || echo "warning: could not pull $BASE_IMAGE, building on the local copy"
-podman build -t postgres-timescale-pgvector .
+# PostgreSQL and its extensions come at the newest release their apt repositories have, and a build
+# from cache would keep the ones fetched first, so each run builds afresh. Offline, it starts the
+# image built before.
+if ! podman build --no-cache -t postgres-timescale-pgvector .; then
+  podman image exists postgres-timescale-pgvector || exit 1
+  echo "warning: could not build the image, starting the one built before" >&2
+fi
 
 # The mount is the image's PGDATA: any other path leaves the data in the container's own layer,
 # gone at the next --replace. `:U` gives the directory to the container's postgres user under
@@ -40,8 +42,7 @@ podman run --replace -d \
   -c ssl=off -c port="$PGPORT" \
   -c shared_preload_libraries=timescaledb,pg_stat_statements
 
-# The image restarts the server once during its first start, so readiness is a query that
-# succeeds, not the first sign of life.
+# Ready is a query that succeeds, not the first sign of life.
 for _ in $(seq 120); do
   podman exec "$CONTAINER_NAME" psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -p "$PGPORT" -c 'SELECT 1' >/dev/null 2>&1 && {
     echo "postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:$PGPORT/$POSTGRES_DB"

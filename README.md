@@ -2,11 +2,19 @@
 
 PostgreSQL for [EiN](https://github.com/einhq): the image and how to start it.
 
-The image (`Containerfile`) is TimescaleDB's PostgreSQL 18 image with pgvector added. It holds
-every extension EiN uses — TimescaleDB, pgvector, PostGIS and pg_trgm — and EiN creates them in
+The image (`Containerfile`) is PostgreSQL 18 on Debian 13, the same pinned `debian:trixie-…-slim`
+as EiN's other images, with every extension EiN uses: TimescaleDB, pgvector, PostGIS and pg_trgm.
+PostgreSQL, pgvector and PostGIS come from PostgreSQL's apt repository, TimescaleDB from
+Timescale's, at the newest release each has when the image is built. EiN creates the extensions in
 its database, and updates them after a new image, itself. `NOTICE.md` names what it carries under
 which licence — TimescaleDB's community features are under the Timescale License, PostGIS under the
 GPL — and where the GPL parts' source is.
+
+Its first start in an empty data directory makes the database: the role `POSTGRES_USER`, a
+superuser with the password `POSTGRES_PASSWORD`, and the database `POSTGRES_DB`, with the settings
+`timescaledb-tune` picks for the machine's memory and processors (or the container's memory limit)
+and TimescaleDB's telemetry off. Connections over the network need the password; `psql` inside the
+container does not.
 
 ## Running it
 
@@ -15,8 +23,8 @@ bash run.sh
 ```
 
 builds the image, starts the container on the host's network and waits until it answers, then
-prints the connection string EiN takes as `POSTGRES_URL`. Run it again to rebuild on the newest
-base image and restart; the data stays.
+prints the connection string EiN takes as `POSTGRES_URL`. Run it again to rebuild with the newest
+PostgreSQL and extension releases and restart; the data stays.
 
 | Variable            | Default               | What it sets                                     |
 | ------------------- | --------------------- | ------------------------------------------------ |
