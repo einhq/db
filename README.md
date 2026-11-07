@@ -39,6 +39,14 @@ Two servers on one host need their own port and container name, and their own da
 The role is the server's superuser, which is what lets EiN create and update its extensions; the
 defaults suit a machine nobody else reaches, so set a password of your own anywhere else.
 
+## The cache across a restart
+
+`pg_prewarm` is preloaded, and with it its autoprewarm worker: every five minutes it writes which
+pages are in `shared_buffers` to `autoprewarm.blocks` in the data directory, and after a restart it
+reads those pages back in the background. A vector search walks its index by random reads, so on a
+cold cache the first searches read from disk for seconds; this puts the restarted server back where
+it was within minutes, without waiting for searches to warm it.
+
 ## Profiling
 
 `pg_stat_statements` is preloaded but not created. To see which statements the database spends

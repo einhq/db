@@ -28,7 +28,8 @@ fi
 # gone at the next --replace. `:U` gives the directory to the container's postgres user under
 # rootless podman, which needs it to exist. --shm-size: parallel queries exchange rows through
 # shared memory, and podman's 64 MB default makes them fail under load. TimescaleDB must be
-# preloaded; pg_stat_statements is, so that a profiling session can create it.
+# preloaded; pg_stat_statements is, so that a profiling session can create it; pg_prewarm is, so
+# that a restart reads back what was in the cache before it (ein/core#1077).
 mkdir -p "$PGDATA_HOST_PATH"
 podman run --replace -d \
   --name "$CONTAINER_NAME" \
@@ -40,7 +41,7 @@ podman run --replace -d \
   --network=host \
   postgres-timescale-pgvector \
   -c ssl=off -c port="$PGPORT" \
-  -c shared_preload_libraries=timescaledb,pg_stat_statements
+  -c shared_preload_libraries=timescaledb,pg_stat_statements,pg_prewarm
 
 # Ready is a query that succeeds, not the first sign of life.
 for _ in $(seq 120); do
